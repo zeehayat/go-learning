@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"time"
 )
 
 type Reading struct {
@@ -11,6 +13,23 @@ type Reading struct {
 }
 type Validator interface {
 	Validate() error
+}
+
+type DBRepository struct {
+	connString string
+}
+
+func (r *DBRepository) saveReading(ctx context.Context, reading *Reading) error {
+	if err := reading.Validate(); err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(10 * time.Second):
+		return fmt.Errorf("timeout")
+
+	}
 }
 
 func (r *Reading) Validate() error {
@@ -23,15 +42,22 @@ func (r *Reading) Validate() error {
 	return nil
 }
 
-func main() {
-	validators := []Validator{
-		&Reading{MeterID: "", Kwh: 1, Timestamp: 0},
-		&Reading{MeterID: "meter1", Kwh: 100, Timestamp: 0},
-		&Reading{MeterID: "XYZ", Kwh: -1, Timestamp: 0},
+func generateReadings(ch chan *Reading) {
+	for i := 0; i < 5; i++ {
+		ch <- &Reading{MeterID: fmt.Sprintf("MTR-%d", i), Kwh: float64(10*i + i), Timestamp: time.Now().Unix()}
 	}
-	for _, v := range validators {
-		if err := v.Validate(); err != nil {
+	close(ch)
+}
+
+func main() {
+	readings := make(chan *Reading, 10)
+	go generateReadings(readings)
+
+	for r := range readings {
+		if err := r.Validate(); err != nil {
 			fmt.Println(err)
+			continue
 		}
+		fmt.Printf("Processed Meter %s with %f kWh\n", r.MeterID, r.Kwh)
 	}
 }
