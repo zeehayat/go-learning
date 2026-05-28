@@ -80,7 +80,7 @@ func logSkippedRow(writer *bufio.Writer, reason string, row []string) {
 	writer.WriteString(line)
 }
 
-func main() {
+func mainV1() {
 	readings, skippedRows, err := parseCSV("DATA/ashuran_april_readings.csv")
 	if err != nil {
 		fmt.Println("The file couldn't be parsed:", err)
