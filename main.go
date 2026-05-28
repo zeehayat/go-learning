@@ -49,7 +49,7 @@ func generateReadings(ch chan *Reading) {
 	close(ch)
 }
 
-func main() {
+func mainT() {
 	readings := make(chan *Reading, 10)
 	go generateReadings(readings)
 
